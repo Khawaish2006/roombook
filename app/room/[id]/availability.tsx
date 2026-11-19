@@ -63,7 +63,9 @@ export default function Availability() {
     <SafeAreaView style={{ flex: 1 }} edges={['bottom']}>
       <Stack.Screen options={{ title: data?.room ? `Book ${data.room.name}` : 'Pick a time' }} />
       <ScrollView contentContainerStyle={{ padding: SPACING.md, paddingBottom: 110 }} keyboardShouldPersistTaps="handled">
-        <Card style={{ borderRadius: RADIUS, overflow: 'hidden' }}>
+        <Card style={{ borderRadius: RADIUS }}>
+          {/* Clip the calendar's corners in an inner View; clipping the Card itself breaks its shadow. */}
+          <View style={{ borderRadius: RADIUS, overflow: 'hidden' }}>
           <Calendar
             key={theme.dark ? 'dark' : 'light'}
             minDate={today}
@@ -80,6 +82,7 @@ export default function Availability() {
               arrowColor: theme.colors.primary,
             }}
           />
+          </View>
         </Card>
 
         <Text variant="titleMedium" style={styles.section}>{formatDate(date, true)}: choose time</Text>

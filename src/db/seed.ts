@@ -4,13 +4,9 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 import { CONFIG } from '../config';
 import { Facility, RoomType } from '../models';
 import { generateBookingId } from '../services/bookingRules';
+import { hashPassword, newSalt } from '../services/passwordHasher';
 import { addDays, nowMin, todayStr } from '../utils/time';
-
-const USERS = [
-  { id: 'u1', name: 'Khushi Sharma', email: 'khushi@college.edu', role: 'student' },
-  { id: 'u2', name: 'Riya Gupta', email: 'riya@college.edu', role: 'student' },
-  { id: 'admin', name: 'Admin Office', email: 'admin@college.edu', role: 'admin' },
-];
+import { DEMO_PASSWORD, USERS } from './demoAccounts';
 
 type SeedRoom = [string, string, RoomType, number, string, number, Facility[]];
 
@@ -43,30 +39,30 @@ const BOOKINGS: SeedBooking[] = [
   // Past two weeks: gives Completed / Cancelled history and activity stats.
   [-14, 'A-204', 'u1', 14, 16, 'Group study'],
   [-13, 'S-02', 'u1', 10, 11, 'Project meeting'],
-  [-12, 'LAB-1', 'u2', 11, 13, 'Project meeting'],
+  [-12, 'LAB-1', 'u3', 11, 13, 'Project meeting'],
   [-11, 'A-204', 'u1', 15, 17, 'Group study'],
   [-10, 'SH-1', 'u2', 9, 11, 'Club activity'],
   [-9, 'S-03', 'u1', 13, 14, 'Presentation practice', true],
   [-7, 'A-204', 'u1', 14, 15, 'Group study'],
-  [-7, 'B-101', 'u2', 10, 12, 'Group study'],
+  [-7, 'B-101', 'u3', 10, 12, 'Group study'],
   [-6, 'S-01', 'u1', 16, 17, 'Group study'],
   [-5, 'LAB-2', 'u1', 11, 12, 'Project meeting', true],
   [-4, 'A-204', 'u1', 15, 16, 'Group study'],
   [-4, 'S-04', 'u2', 14, 16, 'Presentation practice'],
   [-3, 'A-102', 'u2', 9, 10, 'Group study'],
   [-2, 'S-02', 'u1', 14, 16, 'Group study'],
-  [-1, 'SH-2', 'u2', 12, 14, 'Club activity'],
+  [-1, 'SH-2', 'u3', 12, 14, 'Club activity'],
   // Today (other students, so availability looks real).
   [0, 'A-204', 'u2', 15, 16, 'Group study'],
   [0, 'S-02', 'u2', 10, 12, 'Project meeting'],
-  [0, 'LAB-1', 'u2', 13, 15, 'Project meeting'],
+  [0, 'LAB-1', 'u3', 13, 15, 'Project meeting'],
   // Next 7 days.
   [1, 'A-204', 'u1', 15, 16, 'Group study'],
   [1, 'S-03', 'u2', 10, 11, 'Group study'],
-  [2, 'SH-1', 'u2', 14, 17, 'Club activity'],
+  [2, 'SH-1', 'u3', 14, 17, 'Club activity'],
   [3, 'LAB-2', 'u1', 11, 13, 'Project meeting'],
   [3, 'S-04', 'u2', 9, 10, 'Group study', true],
-  [5, 'A-301', 'u2', 12, 13, 'Presentation practice'],
+  [5, 'A-301', 'u3', 12, 13, 'Presentation practice'],
   [6, 'S-01', 'u1', 14, 15, 'Group study'],
 ];
 
@@ -74,9 +70,20 @@ export async function seedDatabase(db: SQLiteDatabase): Promise<void> {
   const today = todayStr();
   const nowIso = new Date().toISOString();
 
+  // Hash outside the transaction (crypto is async native work, not SQL).
+  const hashed = await Promise.all(
+    USERS.map(async (u) => {
+      const salt = newSalt();
+      return { ...u, salt, hash: await hashPassword(DEMO_PASSWORD, salt) };
+    }),
+  );
+
   await db.withTransactionAsync(async () => {
-    for (const u of USERS) {
-      await db.runAsync('INSERT INTO users (id, name, email, role) VALUES (?, ?, ?, ?)', u.id, u.name, u.email, u.role);
+    for (const u of hashed) {
+      await db.runAsync(
+        'INSERT INTO users (id, name, email, role, password_hash, salt) VALUES (?, ?, ?, ?, ?, ?)',
+        u.id, u.name, u.email, u.role, u.hash, u.salt,
+      );
     }
 
     for (const [id, name, type, capacity, block, floor, facilities] of ROOMS) {

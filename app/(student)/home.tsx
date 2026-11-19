@@ -1,9 +1,11 @@
 // Student dashboard: greeting, search, quick access, next booking, available now, favourites.
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { router } from 'expo-router';
+import { useState } from 'react';
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
-import { Button, Card, Searchbar, Text, useTheme } from 'react-native-paper';
+import { Avatar, Button, Card, Searchbar, Text, useTheme } from 'react-native-paper';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { LogoutDialog } from '../../src/components/LogoutDialog';
 import { RoomCard } from '../../src/components/RoomCard';
 import { SkeletonList } from '../../src/components/States';
 import { StatusBadge } from '../../src/components/StatusBadge';
@@ -22,6 +24,7 @@ export default function Home() {
   const user = useCurrentUser();
   const theme = useTheme();
   const favs = useFavorites();
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const { data, loading, refreshing, refresh } = useFocusData(async () => {
     const [bookings, rooms] = await Promise.all([getBookingsForUser(user.id), searchRooms()]);
@@ -38,12 +41,21 @@ export default function Home() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: theme.colors.background }} edges={['top']}>
       <ScrollView contentContainerStyle={styles.content} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={refresh} />}>
-        <Text variant="headlineSmall" style={{ fontWeight: '700' }}>
-          {greeting()}, {user.name.split(' ')[0]} 👋
-        </Text>
-        <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant, marginBottom: SPACING.md }}>
-          Where would you like to work today?
-        </Text>
+        <View style={styles.topRow}>
+          <View style={{ flex: 1 }}>
+            <Text variant="headlineSmall" style={{ fontWeight: '700' }}>
+              {greeting()}, {user.name.split(' ')[0]} 👋
+            </Text>
+            <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>
+              Where would you like to work today?
+            </Text>
+          </View>
+          {/* Tap your initials to log out / switch to another account. */}
+          <Pressable onPress={() => setLogoutOpen(true)} accessibilityLabel="Log out or switch account" style={styles.accountBtn}>
+            <Avatar.Text size={40} label={user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase()} />
+            <Text variant="labelSmall" style={{ color: theme.colors.primary, marginTop: 2 }}>Switch</Text>
+          </Pressable>
+        </View>
 
         <Pressable onPress={() => router.push({ pathname: '/(student)/explore', params: { focus: '1' } })}>
           <View pointerEvents="none">
@@ -111,12 +123,15 @@ export default function Home() {
           </>
         )}
       </ScrollView>
+      <LogoutDialog visible={logoutOpen} onDismiss={() => setLogoutOpen(false)} />
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
   content: { padding: SPACING.md, paddingBottom: SPACING.xl },
+  topRow: { flexDirection: 'row', alignItems: 'center', gap: SPACING.sm, marginBottom: SPACING.md },
+  accountBtn: { alignItems: 'center' },
   section: { marginTop: SPACING.lg, marginBottom: SPACING.sm, fontWeight: '700' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: SPACING.sm + 4 },
   quick: { flexBasis: '47%', flexGrow: 1, borderRadius: RADIUS },

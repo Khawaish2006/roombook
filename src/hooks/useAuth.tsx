@@ -1,16 +1,22 @@
-// Mock authentication: the user is looked up by email, and the session is kept in AsyncStorage.
+// Local authentication: passwords are checked against salted hashes in SQLite,
+// and the logged-in user id is kept in AsyncStorage so the session survives restarts.
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, ReactNode, useCallback, useContext, useEffect, useState } from 'react';
 import { User } from '../models';
-import { findUserByEmail, findUserById } from '../repositories/userRepo';
+import { findUserById } from '../repositories/userRepo';
+import { FieldErrors, SignUpInput } from '../services/authRules';
+import { signIn, signUp } from '../services/authService';
 
-const SESSION_KEY = 'session:userId';
+// "v2" because the user list changed with passwords; older saved sessions are ignored.
+const SESSION_KEY = 'session:v2:userId';
 
 interface AuthState {
   user: User | null;
   loading: boolean;
   /** Returns an error message, or null on success. */
-  login: (email: string) => Promise<string | null>;
+  login: (email: string, password: string) => Promise<string | null>;
+  /** Returns field errors, or null on success (the new user is logged in). */
+  register: (input: SignUpInput) => Promise<FieldErrors | null>;
   logout: () => Promise<void>;
 }
 
@@ -32,21 +38,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     })();
   }, []);
 
-  const login = useCallback(async (email: string) => {
-    if (!/^\S+@\S+\.\S+$/.test(email.trim())) return 'Enter a valid email address.';
-    const found = await findUserByEmail(email);
-    if (!found) return 'No account found for this email.';
-    await AsyncStorage.setItem(SESSION_KEY, found.id);
-    setUser(found);
-    return null;
+  const startSession = useCallback(async (u: User) => {
+    await AsyncStorage.setItem(SESSION_KEY, u.id);
+    setUser(u);
   }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await signIn(email, password);
+    if (!result.ok) return result.error;
+    await startSession(result.user);
+    return null;
+  }, [startSession]);
+
+  const register = useCallback(async (input: SignUpInput) => {
+    const result = await signUp(input);
+    if (!result.ok) return result.errors;
+    await startSession(result.user);
+    return null;
+  }, [startSession]);
 
   const logout = useCallback(async () => {
     await AsyncStorage.removeItem(SESSION_KEY);
     setUser(null);
   }, []);
 
-  return <AuthContext.Provider value={{ user, loading, login, logout }}>{children}</AuthContext.Provider>;
+  return <AuthContext.Provider value={{ user, loading, login, register, logout }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth(): AuthState {

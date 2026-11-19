@@ -1,12 +1,14 @@
 // Student bottom tabs. Redirects away if not logged in as a student.
 import { Redirect, Tabs } from 'expo-router';
 import { useTheme } from 'react-native-paper';
+import { AccountButton } from '../../src/components/AccountButton';
 import { tabIcon as icon } from '../../src/components/TabIcon';
 import { useAuth } from '../../src/hooks/useAuth';
 
 export default function StudentLayout() {
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
   const theme = useTheme();
+  if (loading) return null; // wait for the saved session before deciding (matters for web deep links)
   if (!user) return <Redirect href="/login" />;
   if (user.role !== 'student') return <Redirect href="/(admin)/dashboard" />;
 
@@ -14,10 +16,12 @@ export default function StudentLayout() {
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.onSurfaceVariant, // default is dark grey, invisible in dark mode
         tabBarStyle: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.outlineVariant },
         headerStyle: { backgroundColor: theme.colors.surface },
         headerTintColor: theme.colors.onSurface,
         headerShadowVisible: false,
+        headerRight: () => <AccountButton />,
         sceneStyle: { backgroundColor: theme.colors.background },
       }}
     >

@@ -16,6 +16,13 @@ npx expo start              # scan the QR code with Expo Go
 
 Phone and laptop must be on the same Wi-Fi. If they aren't, run `npx expo start --tunnel`.
 
+### Run it on your laptop (browser, phone-sized)
+1. `npx expo start`, then press **`w`**. The app opens at `http://localhost:8081`.
+2. In Chrome or Edge press **F12**, then **Ctrl+Shift+M**, and pick a phone (e.g. iPhone 14 / Pixel 7) at the top.
+
+The browser keeps its own data, separate from any phone. Booking reminders (notifications) don't fire on web; everything else works.
+For SQLite in the browser, `metro.config.js` allows `.wasm` files and `app.json` sends the COOP/COEP headers that browsers require.
+
 ```bash
 npm test            # Jest unit tests (conflict logic, IDs, slots, status, AI sanitiser)
 npm run typecheck   # TypeScript
@@ -28,13 +35,20 @@ npm run typecheck   # TypeScript
 
 **Without a key the app still works.** Every AI feature falls back to a non-AI path, and Profile shows "Fallbacks in use".
 
-## Demo accounts (tap the chips on the login screen)
+## Accounts
 
-| Role | Email |
-|---|---|
-| Student | khushi@college.edu |
-| Student | riya@college.edu |
-| Admin | admin@college.edu |
+Sign in with email + password, or tap **"New here? Create an account"** to sign up. New accounts are always **students**. Admin accounts (`@admin.ac`) can't be created from the app.
+
+Team accounts seeded on first launch (not shown in the app; share them privately). They're listed in `src/db/demoAccounts.ts`:
+
+| Name | Role | Email | Password |
+|---|---|---|---|
+| Khawaish Jindal | **Admin** | khawaish@admin.ac | roombook123 |
+| Khushi | Student | khushi@college.edu | roombook123 |
+| Kanika Debnath | Student | kanika.debnath@college.edu | roombook123 |
+| Kanika Chouhan | Student | kanika.chouhan@college.edu | roombook123 |
+
+Passwords are never stored. The app stores a random salt and `SHA-256(salt + password)` (expo-crypto). Sign-in gives the same error for "no such email" and "wrong password", so accounts can't be probed.
 
 On first launch the app seeds 18 rooms and about 25 bookings spread over the past 2 weeks and the next 7 days.
 To restore the demo state, use Profile → **Reset demo data**.
@@ -75,7 +89,7 @@ Key points:
 
 ## Manual test checklist
 The spec's 14 test cases all map onto the demo data. Some quick ones:
-- As **Riya**, open **A-204 → Book now → tomorrow** and tap the red 3:00 PM slot. Khushi holds it, so "Try these instead" appears. The transactional check in `createBooking()` is the backstop if two people race for the same slot.
+- As **Kanika Debnath**, open **A-204 → Book now → tomorrow** and tap the red 3:00 PM slot. Khushi holds it, so "Try these instead" appears. The transactional check in `createBooking()` is the backstop if two people race for the same slot.
 - As **Khushi**, book any other room tomorrow 3–4 PM. It's rejected with "You already have a booking at this time".
 - Book 4–5 PM straight after a 3–4 PM booking. This is allowed (back-to-back).
 - Profile → Send test reminder. The notification arrives in 10 s.

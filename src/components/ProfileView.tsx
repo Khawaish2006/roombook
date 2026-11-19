@@ -5,18 +5,19 @@ import { ScrollView, View } from 'react-native';
 import { Avatar, Button, Card, Dialog, Divider, List, Portal, SegmentedButtons, Snackbar, Switch, Text, useTheme } from 'react-native-paper';
 import { isAIConfigured } from '../ai/gemini';
 import { resetDatabase } from '../db/database';
-import { useCurrentUser, useAuth } from '../hooks/useAuth';
+import { useCurrentUser } from '../hooks/useAuth';
 import { useSettings } from '../hooks/useSettings';
 import { sendTestReminder } from '../services/notificationService';
 import { RADIUS, SPACING } from '../theme';
+import { LogoutDialog } from './LogoutDialog';
 
 export function ProfileView() {
   const user = useCurrentUser();
-  const { logout } = useAuth();
   const theme = useTheme();
   const settings = useSettings();
   const [snack, setSnack] = useState<string | null>(null);
   const [resetOpen, setResetOpen] = useState(false);
+  const [logoutOpen, setLogoutOpen] = useState(false);
 
   const initials = user.name.split(' ').map((w) => w[0]).join('').slice(0, 2).toUpperCase();
   const isStudent = user.role === 'student';
@@ -32,11 +33,6 @@ export function ProfileView() {
     setSnack('Demo data restored');
   };
 
-  const doLogout = async () => {
-    await logout();
-    router.replace('/login');
-  };
-
   return (
     <ScrollView contentContainerStyle={{ padding: SPACING.md, paddingBottom: SPACING.xl }}>
       <Card style={{ borderRadius: RADIUS }}>
@@ -45,6 +41,9 @@ export function ProfileView() {
           <Text variant="titleLarge" style={{ fontWeight: '700', marginTop: SPACING.sm }}>{user.name}</Text>
           <Text variant="bodyMedium" style={{ color: theme.colors.onSurfaceVariant }}>{user.email}</Text>
           <Text variant="labelMedium" style={{ color: theme.colors.primary, textTransform: 'uppercase' }}>{user.role}</Text>
+          <Button mode="outlined" icon="account-switch" compact style={{ marginTop: SPACING.sm }} onPress={() => setLogoutOpen(true)}>
+            Log out / Switch account
+          </Button>
         </Card.Content>
       </Card>
 
@@ -87,10 +86,10 @@ export function ProfileView() {
         <List.Item title="Reset demo data" description="Re-seed rooms and bookings" left={(p) => <List.Icon {...p} icon="database-refresh" />} onPress={() => setResetOpen(true)} />
       </Card>
 
-      <Button mode="outlined" icon="logout" style={{ marginTop: SPACING.lg }} onPress={doLogout}>Log out</Button>
+      <Button mode="contained-tonal" icon="logout" style={{ marginTop: SPACING.lg }} onPress={() => setLogoutOpen(true)}>Log out</Button>
 
       <Portal>
-        <Dialog visible={resetOpen} onDismiss={() => setResetOpen(false)}>
+                <Dialog visible={resetOpen} onDismiss={() => setResetOpen(false)}>
           <Dialog.Title>Reset demo data?</Dialog.Title>
           <Dialog.Content><Text>All rooms, bookings and favourites will be replaced with the original demo data.</Text></Dialog.Content>
           <Dialog.Actions>
@@ -99,6 +98,7 @@ export function ProfileView() {
           </Dialog.Actions>
         </Dialog>
       </Portal>
+      <LogoutDialog visible={logoutOpen} onDismiss={() => setLogoutOpen(false)} />
       <Snackbar visible={!!snack} onDismiss={() => setSnack(null)}>{snack}</Snackbar>
     </ScrollView>
   );

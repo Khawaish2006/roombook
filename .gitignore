@@ -42,3 +42,6 @@ yarn-error.*
 
 # secrets
 .env
+
+# Local preview config for Claude Code (machine-specific paths)
+.claude/launch.json

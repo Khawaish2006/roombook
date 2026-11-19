@@ -1,4 +1,6 @@
 // Booking rules: conflict detection, ID generation, validation, create and cancel.
+import type { SQLiteDatabase } from 'expo-sqlite';
+import { Platform } from 'react-native';
 import { CONFIG } from '../config';
 import { getDb } from '../db/database';
 import { Booking } from '../models';
@@ -14,6 +16,20 @@ export * from './bookingRules';
 // ---------- Database operations ----------
 
 /**
+ * Exclusive transaction on phones. The browser build of expo-sqlite doesn't support
+ * withExclusiveTransactionAsync, so on web we use a normal transaction (a browser tab
+ * is a single user, so there's no one to race against).
+ */
+async function runExclusive(work: (txn: SQLiteDatabase) => Promise<void>): Promise<void> {
+  const db = getDb();
+  if (Platform.OS === 'web') {
+    await db.withTransactionAsync(() => work(db));
+  } else {
+    await db.withExclusiveTransactionAsync(work);
+  }
+}
+
+/**
  * Creates a booking. Validation, conflict checks and the insert all run inside ONE
  * exclusive SQLite transaction, so two writes can never both grab the same slot.
  */
@@ -21,7 +37,7 @@ export async function createBooking(req: BookingRequest, reminderMin: number = C
   let created: Booking | null = null;
   let roomName = req.roomId;
 
-  await getDb().withExclusiveTransactionAsync(async (txn) => {
+  await runExclusive(async (txn) => {
     // 1. Validate
     const room = await getRoomById(req.roomId, txn);
     validateBookingRequest(req, room);

@@ -7,7 +7,9 @@ CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   email TEXT UNIQUE NOT NULL,
-  role TEXT NOT NULL CHECK (role IN ('student','admin'))
+  role TEXT NOT NULL CHECK (role IN ('student','admin')),
+  password_hash TEXT NOT NULL,       -- SHA-256(salt + password), never the plain password
+  salt TEXT NOT NULL                 -- random per user
 );
 
 CREATE TABLE IF NOT EXISTS rooms (
