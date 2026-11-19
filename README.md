@@ -83,7 +83,6 @@ The spec's 14 test cases all map onto the demo data. Some quick ones:
 - Turn on airplane mode, then use Smart Search. You get the fallback snackbar and the filters open.
 
 ## Notes
-- The project lives on `D:` and `.npmrc` points npm's cache at `D:/npm-cache`, because the C: drive was full.
 - `.npmrc` sets `legacy-peer-deps=true` to get past a react-dom peer conflict from react-native-paper.
 - Local notifications work in Expo Go. Remote push isn't used.
 - The app targets Android and iOS through Expo Go. Web isn't supported, because exclusive SQLite transactions aren't available there.
